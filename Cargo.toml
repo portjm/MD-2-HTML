@@ -1,5 +1,6 @@
 [package]
 name = "MD2HTML"
+description = "A minimal utility to convert MarkDown files into formatted HTML."
 version = "0.1.0"
 edition = "2021"
 
