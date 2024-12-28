@@ -9,6 +9,8 @@ Simple utility to convert your Markdown files into formatted HTML, written in Ru
 ```
 
 ## Dev Log
+###### 12/28/24 - Parsing Markdown
+
 ###### 12/27/24 - Basic CONOPS
 ##### Goal
 To provide an easy way to generate static HTML pages automatically from Markdown documents with minimal set-up and dependencies.

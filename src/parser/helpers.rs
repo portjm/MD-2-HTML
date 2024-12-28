@@ -51,13 +51,13 @@ pub enum Tokens {
     HEAD4,
     HEAD5,
     HEAD6,
-    ITAL,
-    BOLD,
+    ASTERISK,
     BLOCK,
     NUMBER,
     CHAR,
     NEWLINE,
-    WHTSPACE,
+    SPACE,
+    CODE,
     EMPTY
 }
 
@@ -98,7 +98,20 @@ pub fn tokenize_md(contents: &String) -> Vec<Token> {
                     current_token = Tokens::EMPTY;
                 }
             },
-            _ => { tokens.push(Token(Tokens::CHAR, symbol))}
+            '\r' => continue,
+            '\n' => tokens.push(Token(Tokens::NEWLINE, symbol)),
+            ' ' => tokens.push(Token(Tokens::SPACE, symbol)),
+            '*' => tokens.push(Token(Tokens::ASTERISK, symbol)),
+            '>' => tokens.push(Token(Tokens::BLOCK, symbol)),
+            '`' => tokens.push(Token(Tokens::CODE, symbol)),
+            _ => { 
+                if symbol.is_ascii_digit() {
+                    tokens.push(Token(Tokens::NUMBER, symbol));
+                } else {
+                    tokens.push(Token(Tokens::CHAR, symbol));
+                }
+                
+            }
         }
     }
 
