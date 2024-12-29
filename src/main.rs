@@ -1,7 +1,7 @@
 use std::{env, process, fs, io, path::Path};
 pub mod parser;
 // use parser::helpers::parse_text;
-use parser::helpers::{tokenize_md};
+use parser::helpers::tokenize_md;
 fn read_md_as_string(fp: &Path) -> Result<String, io::Error> {
     fs::read_to_string(fp)
 }
@@ -24,7 +24,9 @@ fn main() {
             // parse_text(&contents);
             println!("File contents:\n{}", contents);
             let tokens = tokenize_md(&contents);
-            println!("{:?}", tokens);
+            for t in tokens{
+                println!("{:?}", &t);
+            }
         }
         Err(error) => {
             eprintln!("Error reading file: {}", error);
