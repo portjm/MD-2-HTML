@@ -1,49 +1,4 @@
-#[derive(PartialEq)]
-enum Elements {
-    Heading(u8),
-    Bold,
-    Italics,
-    Text,
-    Empty
-}
-
-
-
-// pub fn parse_text(contents:&String) -> Option<String> {
-//     let mut current_line = String::from("");
-//     let mut result: Vec<String> = Vec::new();
-//     let mut symbols = contents.chars();
-
-//     let mut curr_element = Elements::Empty;
-    
-//     while let Some(symbol) = symbols.next() {
-//         print!("{}", symbol);
-//         match symbol {
-//             '#' => {
-//                 let element = heading(symbol, &curr_element);
-                
-//                     if let Elements::Heading(h) = curr_element{
-//                         let html_elem = format!("<h{}>",h); 
-//                         current_line.push_str(&html_elem);
-//                     }
-             
-//             },
-//             _ => {
-//                 let next_element = heading(symbol, &curr_element);
-//                 // if next_element != curr_element {
-
-//                 // }
-            
-//             }
-            
-//         }
-//     }
-
-
-//     Some(current_line)
-// }
-
-#[derive(Debug,Copy, Clone)]
+#[derive(Debug,Copy, Clone, PartialEq)]
 pub enum Tokens {
     HEAD1 = 0,
     HEAD2,
@@ -82,7 +37,8 @@ fn heading(state: &Tokens) -> Option<Tokens>{
 }
 
 // Tokenizes MD document passed in as string
-pub fn tokenize_md(contents: &String) -> Vec<Token> {
+pub fn tokenize(contents: &String) -> Vec<Token> {
+    // File as char vec
     let symbols:Vec<char> = contents.chars().collect();
     let mut tokens: Vec<Token> = Vec::new();
 
@@ -94,7 +50,7 @@ pub fn tokenize_md(contents: &String) -> Vec<Token> {
 
     while idx < symbols.len() {
         current_symbol = symbols[idx];
-        // print!("{}", current_symbol);
+
         match current_symbol {
                     '#' => {
                         if let Some(new_token) = heading(&current_token) {
@@ -136,4 +92,70 @@ pub fn tokenize_md(contents: &String) -> Vec<Token> {
     }
 
     tokens
+}
+
+#[derive(PartialEq)]
+enum Element {
+    Heading { level: u8, content: String },
+    Paragraph(Vec<Element>), // Inline elements (e.g., text, bold) as children
+    Bold(String),
+    PartialBold(String),
+    Italics(String),
+    PartialItalics(String),
+    Code(String),
+    Text(String),
+    Empty
+}
+
+impl Element {
+    fn to_html(&self) -> String {
+        match self {
+            Element::Italics(text) => format!("<em>{}</em>", text),
+            _ => String::from("placeholder")
+        }
+    }
+}
+
+struct Parser {
+    current_state: Element,
+
+}
+
+impl Parser {
+    fn new() -> Self {
+        Parser {
+            current_state: Element::Empty
+        }
+    }
+
+    fn transition(&mut self, input:Token) {
+        match &mut self.current_state {
+            // Base state
+            Element::Empty => {
+                if input.0 == Tokens::ASTERISK {
+                    self.current_state = Element::PartialItalics("".to_string());
+                }
+            },
+
+            Element::PartialItalics(text) => {
+                if input.0 == Tokens::ASTERISK {
+                    self.current_state = Element::Bold(text.to_owned());
+                } else {
+                    self.current_state = Element::PartialItalics(text.to_owned());
+                }
+            },
+            Element::Italics(text) => {
+                if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
+                    text.push(input.1);
+                } else if input.0 == Tokens::ASTERISK { // Complete Italics element
+                    // add to parent element
+                }
+            }
+
+            Element::Bold(text) => {
+
+            }
+            _ => {}
+        }
+    }
 }
