@@ -148,10 +148,12 @@ impl Parser {
             },
 
             Element::PartialItalics(text) => {
-                if input.0 == Tokens::ASTERISK {
-                    self.current_state = Element::Bold(text.to_owned());
+                if input.0 == Tokens::SPACE {
+                    text.push(input.1);
+                    self.current_state = Element::Text(text.to_owned());
+                    
                 } else {
-                    self.current_state = Element::PartialItalics(text.to_owned());
+                    self.current_state = Element::Italics(text.to_owned());
                 }
             },
             Element::Italics(text) => {
@@ -187,4 +189,14 @@ mod tests {
             assert_eq!(tokens[0].0 as usize, level - 1);
         }
     }
+
+    // INCOMPLETE
+    // #[test]
+    // fn test_italics() {
+    //     let valid_case = String::from("*test text*");
+    //     let invalid_case = String::from("* test text*");
+
+    //     let valid_tokens = tokenize(&valid_case);
+    //     let invalid_tokens = tokenize(&invalid_case);
+    // }
 }
