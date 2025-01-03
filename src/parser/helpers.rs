@@ -8,6 +8,7 @@ pub enum Tokens {
     HEAD6,
     EMPTY,
     ASTERISK,
+    DBLASTERISK,
     BLOCK,
     NUMBER,
     CHAR,
@@ -72,7 +73,15 @@ pub fn tokenize(contents: &String) -> Vec<Token> {
                         current_token = Tokens::EMPTY;
                     },
                     ' ' => tokens.push(Token(Tokens::SPACE, current_symbol)),
-                    '*' => tokens.push(Token(Tokens::ASTERISK, current_symbol)),
+                    '*' => {
+                        if symbols[idx+1] != '*' {
+                            tokens.push(Token(Tokens::ASTERISK, current_symbol));
+                        } else {
+        
+                            tokens.push(Token(Tokens::DBLASTERISK, current_symbol));
+                        }
+                        
+                    },
                     '>' => tokens.push(Token(Tokens::BLOCK, current_symbol)),
                     '`' => tokens.push(Token(Tokens::CODE, current_symbol)),
                     '.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
@@ -118,7 +127,6 @@ impl Element {
 
 struct Parser {
     current_state: Element,
-
 }
 
 impl Parser {
@@ -134,6 +142,8 @@ impl Parser {
             Element::Empty => {
                 if input.0 == Tokens::ASTERISK {
                     self.current_state = Element::PartialItalics("".to_string());
+                } else if input.0 == Tokens::DBLASTERISK {
+                    self.current_state = Element::Bold("".to_string());
                 }
             },
 
@@ -156,6 +166,25 @@ impl Parser {
 
             }
             _ => {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*; 
+
+    #[test]
+    fn test_headers() {
+        for level in 1..7 {
+            // Generate MD element
+            let hashes = "#".repeat(level);
+            let header_text = format!("{} Title {}", hashes, level);
+            
+            let tokens = tokenize(&header_text);
+            
+            // Header enum variants start at 0, hence level - 1
+            assert_eq!(tokens[0].0 as usize, level - 1);
         }
     }
 }
