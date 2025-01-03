@@ -127,12 +127,16 @@ impl Element {
 
 struct Parser {
     current_state: Element,
+    current_branch:Vec<Element>,
+    document: Vec<Element>
 }
 
 impl Parser {
     fn new() -> Self {
         Parser {
-            current_state: Element::Empty
+            current_state: Element::Empty,
+            current_branch: Vec::new(),
+            document: Vec::new()
         }
     }
 
@@ -140,6 +144,11 @@ impl Parser {
         match &mut self.current_state {
             // Base state
             Element::Empty => {
+                if (input.0 as u8) < 6 {
+                    self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
+                    self.current_state = Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() };
+                    
+                }
                 if input.0 == Tokens::ASTERISK {
                     self.current_state = Element::PartialItalics("".to_string());
                 } else if input.0 == Tokens::DBLASTERISK {
@@ -166,6 +175,14 @@ impl Parser {
 
             Element::Bold(text) => {
 
+            },
+
+            Element::Heading { level, content } => {
+                if input.0 == Tokens::NEWLINE {
+                    // Push element into AST
+                } else {
+                    
+                }
             }
             _ => {}
         }
