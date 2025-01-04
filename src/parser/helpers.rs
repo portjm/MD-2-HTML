@@ -87,6 +87,7 @@ pub fn tokenize(contents: &String) -> Vec<Token> {
                     '.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
                     '-' => tokens.push(Token(Tokens::DASH, current_symbol)),
                     '\\' => tokens.push(Token(Tokens::BACKSLASH, current_symbol)),
+                    // TOKENIZE ESCAPED CHARS AS CHAR TOKENS
                     _ => { 
                         if current_symbol.is_ascii_digit() {
                             tokens.push(Token(Tokens::NUMBER, current_symbol));
@@ -133,58 +134,66 @@ struct Parser {
 
 impl Parser {
     fn new() -> Self {
-        Parser {
+        let mut np = Parser {
             current_state: Element::Empty,
             current_branch: Vec::new(),
             document: Vec::new()
-        }
+        };
+        np.current_branch.push(Element::Empty);
+
+        return np
     }
 
     fn transition(&mut self, input:Token) {
-        match &mut self.current_state {
-            // Base state
-            Element::Empty => {
-                if (input.0 as u8) < 6 {
-                    self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
-                    self.current_state = Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() };
+        if let Some(current_state) = self.current_branch.last_mut() {
+            match current_state {
+                // Base state
+                Element::Empty => {
+                    if (input.0 as u8) < 6 {
+                        self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
+                        self.current_state = Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() };
+                    }
                     
+                    if input.0 == Tokens::ASTERISK {
+                        self.current_branch.push(Element::PartialItalics("".to_string()));
+                        self.current_state = Element::PartialItalics("".to_string());
+                    }
+    
+                    if input.0 == Tokens::DBLASTERISK {
+                        self.current_state = Element::Bold("".to_string());
+                    }
+                },
+    
+                Element::PartialItalics(text) => {
+                    if input.0 == Tokens::SPACE {
+                        text.push(input.1);
+                        self.current_state = Element::Text(text.to_owned());
+                        
+                    } else {
+                        self.current_state = Element::Italics(text.to_owned());
+                    }
+                },
+                Element::Italics(text) => {
+                    if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
+                        text.push(input.1);
+                    } else if input.0 == Tokens::ASTERISK { // Complete Italics element
+                        // add to parent element
+                    }
                 }
-                if input.0 == Tokens::ASTERISK {
-                    self.current_state = Element::PartialItalics("".to_string());
-                } else if input.0 == Tokens::DBLASTERISK {
-                    self.current_state = Element::Bold("".to_string());
+    
+                Element::Bold(text) => {
+    
+                },
+    
+                Element::Heading { level, content } => {
+                    if input.0 == Tokens::NEWLINE {
+                        // Push element into AST or document?
+                    } else if input.0 == Tokens::ASTERISK {
+                        self.current_branch.push(Element::PartialItalics("".to_string()));
+                    }
                 }
-            },
-
-            Element::PartialItalics(text) => {
-                if input.0 == Tokens::SPACE {
-                    text.push(input.1);
-                    self.current_state = Element::Text(text.to_owned());
-                    
-                } else {
-                    self.current_state = Element::Italics(text.to_owned());
-                }
-            },
-            Element::Italics(text) => {
-                if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
-                    text.push(input.1);
-                } else if input.0 == Tokens::ASTERISK { // Complete Italics element
-                    // add to parent element
-                }
+                _ => {}
             }
-
-            Element::Bold(text) => {
-
-            },
-
-            Element::Heading { level, content } => {
-                if input.0 == Tokens::NEWLINE {
-                    // Push element into AST
-                } else {
-                    
-                }
-            }
-            _ => {}
         }
     }
 }
