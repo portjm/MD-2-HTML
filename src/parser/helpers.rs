@@ -129,7 +129,7 @@ impl Element {
 struct Parser {
     current_state: Element,
     current_branch:Vec<Element>,
-    document: Vec<Element>
+    document: Vec<String>
 }
 
 impl Parser {
@@ -139,6 +139,7 @@ impl Parser {
             current_branch: Vec::new(),
             document: Vec::new()
         };
+
         np.current_branch.push(Element::Empty);
 
         return np
@@ -167,7 +168,8 @@ impl Parser {
                 Element::PartialItalics(text) => {
                     if input.0 == Tokens::SPACE {
                         text.push(input.1);
-                        self.current_state = Element::Text(text.to_owned());
+                        *current_state = Element::Text(text.to_owned());
+                        //self.current_state = Element::Text(text.to_owned());
                         
                     } else {
                         self.current_state = Element::Italics(text.to_owned());
@@ -195,6 +197,16 @@ impl Parser {
                 _ => {}
             }
         }
+    }
+
+    fn to_html(&mut self)  {
+        let mut elements = self.document.iter();
+        while let Some(elem) = elements.next()  {
+            println!("{}", elem);
+        }
+        
+
+
     }
 }
 
