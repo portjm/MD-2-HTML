@@ -124,18 +124,19 @@ impl Element {
             _ => String::from("placeholder")
         }
     }
+
 }
 
 struct Parser {
-    current_state: Element,
+    markdown: Vec<Token>,
     current_branch:Vec<Element>,
     document: Vec<String>
 }
 
 impl Parser {
-    fn new() -> Self {
+    fn new(md_tokens: Vec<Token>) -> Self {
         let mut np = Parser {
-            current_state: Element::Empty,
+            markdown: md_tokens,
             current_branch: Vec::new(),
             document: Vec::new()
         };
@@ -146,58 +147,79 @@ impl Parser {
     }
 
     fn transition(&mut self, input:Token) {
-        if let Some(current_state) = self.current_branch.last_mut() {
-            match current_state {
-                // Base state
-                Element::Empty => {
-                    if (input.0 as u8) < 6 {
-                        self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
-                        self.current_state = Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() };
-                    }
-                    
-                    if input.0 == Tokens::ASTERISK {
-                        self.current_branch.push(Element::PartialItalics("".to_string()));
-                        self.current_state = Element::PartialItalics("".to_string());
-                    }
-    
-                    if input.0 == Tokens::DBLASTERISK {
-                        self.current_state = Element::Bold("".to_string());
-                    }
-                },
-    
-                Element::PartialItalics(text) => {
-                    if input.0 == Tokens::SPACE {
-                        text.push(input.1);
-                        *current_state = Element::Text(text.to_owned());
-                        //self.current_state = Element::Text(text.to_owned());
-                        
-                    } else {
-                        self.current_state = Element::Italics(text.to_owned());
-                    }
-                },
-                Element::Italics(text) => {
-                    if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
-                        text.push(input.1);
-                    } else if input.0 == Tokens::ASTERISK { // Complete Italics element
-                        // add to parent element
-                    }
-                }
-    
-                Element::Bold(text) => {
-    
-                },
-    
-                Element::Heading { level, content } => {
-                    if input.0 == Tokens::NEWLINE {
-                        // Push element into AST or document?
-                    } else if input.0 == Tokens::ASTERISK {
-                        self.current_branch.push(Element::PartialItalics("".to_string()));
-                    }
-                }
-                _ => {}
-            }
-        }
+        // match Token
+            // Block token (text, list, block quote)
+            // Heading token
+
+            
     }
+
+    // fn transition(&mut self, input:Token) {
+    //     if let Some(current_state) = self.current_branch.last_mut() {
+    //         match current_state {
+    //             // Base state
+    //             Element::Empty => {
+
+    //                 // Transition to Heading elem
+    //                 if (input.0 as u8) < 6 {
+    //                     self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
+    //                 }
+
+    //                 // Transition to Italics elem
+    //                 if input.0 == Tokens::ASTERISK {
+    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
+    //                 }
+                    
+    //                 // Transition to Bold elem
+    //                 if input.0 == Tokens::DBLASTERISK {
+    //                 }
+
+    //                 if input.0 == Tokens::CHAR {
+    //                     self.current_branch.push(Element::Text(format!("{}", input.1)));
+    //                 }
+    //             },
+    
+    //             Element::PartialItalics(text) => {
+    //                 if input.0 == Tokens::SPACE {
+    //                     text.push(input.1);
+    //                     *current_state = Element::Text(text.to_owned());
+                        
+    //                 } else {
+    //                 }
+    //             },
+    //             Element::Italics(text) => {
+    //                 if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
+    //                     text.push(input.1);
+    //                 } else if input.0 == Tokens::ASTERISK { // Complete Italics element
+    //                     // add to parent element
+    //                 }
+    //             }
+    
+    //             Element::Bold(text) => {
+    
+    //             },
+
+    //             Element::Text(text) => {
+    //                 if input.0 == Tokens::CHAR || input.0 == Tokens::NUMBER {
+    //                     text.push(input.1);
+    //                 } else if input.0 == Tokens::ASTERISK {
+    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
+    //                 } else if (input.0 as u8) < 6 {
+    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
+    //                 }
+    //             },
+    
+    //             Element::Heading { level, content } => {
+    //                 if input.0 == Tokens::NEWLINE {
+    //                     // Push element into AST or document?
+    //                 } else if input.0 == Tokens::ASTERISK {
+    //                     self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
+    //                 }
+    //             }
+    //             _ => {}
+    //         }
+    //     }
+    // }
 
     fn to_html(&mut self)  {
         let mut elements = self.document.iter();
