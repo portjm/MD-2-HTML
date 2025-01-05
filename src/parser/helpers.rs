@@ -53,6 +53,7 @@ pub fn tokenize(contents: &String) -> Vec<Token> {
         current_symbol = symbols[idx];
 
         match current_symbol {
+                    // TO-DO: NEEDS TO ACCOUNT FOR SPACE AFTER '#' ELSE INVALID HEADER
                     '#' => {
                         if let Some(new_token) = heading(&current_token) {
                             current_token = new_token; 
@@ -82,9 +83,10 @@ pub fn tokenize(contents: &String) -> Vec<Token> {
                         }
                         
                     },
+                    // Need to update tokenization to account for symbols in text
                     '>' => tokens.push(Token(Tokens::BLOCK, current_symbol)),
                     '`' => tokens.push(Token(Tokens::CODE, current_symbol)),
-                    '.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
+                    //'.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
                     '-' => tokens.push(Token(Tokens::DASH, current_symbol)),
                     '\\' => tokens.push(Token(Tokens::BACKSLASH, current_symbol)),
                     // TOKENIZE ESCAPED CHARS AS CHAR TOKENS
@@ -120,6 +122,7 @@ enum Element {
 impl Element {
     fn to_html(&self) -> String {
         match self {
+            Element::Heading { level, content } => format!("<h{}>{}</h{}>", level, content, level),
             Element::Italics(text) => format!("<em>{}</em>", text),
             _ => String::from("placeholder")
         }
@@ -129,14 +132,16 @@ impl Element {
 
 struct Parser {
     markdown: Vec<Token>,
+    current_idx: usize,
     current_branch:Vec<Element>,
     document: Vec<String>
 }
 
-impl Parser {
+impl Parser{
     fn new(md_tokens: Vec<Token>) -> Self {
         let mut np = Parser {
             markdown: md_tokens,
+            current_idx: 0,
             current_branch: Vec::new(),
             document: Vec::new()
         };
@@ -150,7 +155,27 @@ impl Parser {
         // match Token
             // Block token (text, list, block quote)
             // Heading token
-
+            if let Some(current_state) = self.current_branch.last_mut() {
+                match current_state {
+                    Element::Empty => {
+                        // Input: Header while in neutral state
+                        if (input.0 as u8) < 6 {
+                            self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
+                        }
+                    },
+                    Element::Heading { level, content } => {
+                        // Disgusting; There must be a better way
+                        if input.0 == Tokens::CHAR || input.0 == Tokens::NUMBER || input.0 == Tokens::DASH || input.0 == Tokens::SPACE {
+                            content.push(input.1);
+                        } else if input.0 == Tokens::ASTERISK {
+                            
+                        } else if input.0 == Tokens::NEWLINE {
+                            self.document.push(current_state.to_html());
+                        }
+                    },
+                    _ => {}
+                }
+            }
             
     }
 
