@@ -1,4 +1,5 @@
-#[derive(Debug,Copy, Clone, PartialEq)]
+#![allow(unused)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Tokens {
     HEAD1 = 0,
     HEAD2,
@@ -17,35 +18,33 @@ pub enum Tokens {
     BACKSLASH,
     NEWLINE,
     SPACE,
-    CODE
-    
+    CODE,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Token(Tokens, char);
 
-fn heading(state: &Tokens) -> Option<Tokens>{
+fn heading(state: &Tokens) -> Option<Tokens> {
     match *state as isize {
         6 => return Some(Tokens::HEAD1),
-        0  => return Some(Tokens::HEAD2),
-        1  => return Some(Tokens::HEAD3),
-        2  => return Some(Tokens::HEAD4),
-        3  => return Some(Tokens::HEAD5),
-        4  => return Some(Tokens::HEAD6),
-        _ => None
+        0 => return Some(Tokens::HEAD2),
+        1 => return Some(Tokens::HEAD3),
+        2 => return Some(Tokens::HEAD4),
+        3 => return Some(Tokens::HEAD5),
+        4 => return Some(Tokens::HEAD6),
+        _ => None,
     }
-    
 }
 
 // Tokenizes MD document passed in as string
 pub fn tokenize(contents: &String) -> Vec<Token> {
     // File as char vec
-    let symbols:Vec<char> = contents.chars().collect();
+    let symbols: Vec<char> = contents.chars().collect();
     let mut tokens: Vec<Token> = Vec::new();
 
     // Used to track state when token symbol consists of multiple chars (> 2)
     let mut current_token = Tokens::EMPTY;
-    let mut idx:usize = 0;
+    let mut idx: usize = 0;
 
     let mut current_symbol: char;
 
@@ -53,53 +52,57 @@ pub fn tokenize(contents: &String) -> Vec<Token> {
         current_symbol = symbols[idx];
 
         match current_symbol {
-                    // TO-DO: NEEDS TO ACCOUNT FOR SPACE AFTER '#' ELSE INVALID HEADER
-                    '#' => {
-                        if let Some(new_token) = heading(&current_token) {
-                            current_token = new_token; 
-                        } 
-                        
-                        if symbols[idx + 1] != '#' {
-                            tokens.push(Token(current_token, '#'));
-                            current_token = Tokens::EMPTY;
-                        }
-                    },
-                    '\r' => {
-                        current_token = Tokens::EMPTY;
-                        idx += 1;
-                        continue;
-                    },
-                    '\n' => {
-                        tokens.push(Token(Tokens::NEWLINE, current_symbol));
-                        current_token = Tokens::EMPTY;
-                    },
-                    ' ' => tokens.push(Token(Tokens::SPACE, current_symbol)),
-                    '*' => {
-                        if symbols[idx+1] != '*' {
-                            tokens.push(Token(Tokens::ASTERISK, current_symbol));
-                        } else {
-        
-                            tokens.push(Token(Tokens::DBLASTERISK, current_symbol));
-                        }
-                        
-                    },
-                    // Need to update tokenization to account for symbols in text
-                    '>' => tokens.push(Token(Tokens::BLOCK, current_symbol)),
-                    '`' => tokens.push(Token(Tokens::CODE, current_symbol)),
-                    //'.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
-                    '-' => tokens.push(Token(Tokens::DASH, current_symbol)),
-                    '\\' => tokens.push(Token(Tokens::BACKSLASH, current_symbol)),
-                    // TOKENIZE ESCAPED CHARS AS CHAR TOKENS
-                    _ => { 
-                        if current_symbol.is_ascii_digit() {
-                            tokens.push(Token(Tokens::NUMBER, current_symbol));
-                        } else {
-                            tokens.push(Token(Tokens::CHAR, current_symbol));
-                        }
-                        current_token = Tokens::EMPTY;
-                    }
+            // TODO: NEEDS TO ACCOUNT FOR SPACE AFTER '#' ELSE INVALID HEADER
+            '#' => {
+                if let Some(new_token) = heading(&current_token) {
+                    current_token = new_token;
                 }
-            
+
+                if symbols[idx + 1] != '#' {
+                    tokens.push(Token(current_token, '#'));
+                    current_token = Tokens::EMPTY;
+                }
+            }
+            '\r' => {
+                current_token = Tokens::EMPTY;
+                idx += 1;
+                continue;
+            }
+            '\n' => {
+                tokens.push(Token(Tokens::NEWLINE, current_symbol));
+                current_token = Tokens::EMPTY;
+            }
+            ' ' => tokens.push(Token(Tokens::SPACE, current_symbol)),
+            '*' => {
+                if symbols[idx + 1] != '*' {
+                    tokens.push(Token(Tokens::ASTERISK, current_symbol));
+                } else {
+                    tokens.push(Token(Tokens::DBLASTERISK, current_symbol));
+                }
+            }
+            '>' => tokens.push(Token(Tokens::BLOCK, current_symbol)),
+            '`' => tokens.push(Token(Tokens::CODE, current_symbol)),
+            //'.' => tokens.push(Token(Tokens::PERIOD, current_symbol)),
+            '-' => tokens.push(Token(Tokens::DASH, current_symbol)),
+
+            '\\' => match symbols[idx + 1] {
+                '*' | '>' | '`' | '-' => {
+                    tokens.push(Token(Tokens::CHAR, symbols[idx + 1]));
+                    idx += 1;
+                }
+                _ => tokens.push(Token(Tokens::BACKSLASH, current_symbol)),
+            },
+
+            _ => {
+                if current_symbol.is_ascii_digit() {
+                    tokens.push(Token(Tokens::NUMBER, current_symbol));
+                } else {
+                    tokens.push(Token(Tokens::CHAR, current_symbol));
+                }
+                current_token = Tokens::EMPTY;
+            }
+        }
+
         idx += 1;
     }
 
@@ -116,7 +119,7 @@ enum Element {
     PartialItalics(String),
     Code(String),
     Text(String),
-    Empty
+    Empty,
 }
 
 impl Element {
@@ -124,61 +127,75 @@ impl Element {
         match self {
             Element::Heading { level, content } => format!("<h{}>{}</h{}>", level, content, level),
             Element::Italics(text) => format!("<em>{}</em>", text),
-            _ => String::from("placeholder")
+            _ => String::from("placeholder"),
         }
     }
-
 }
 
 struct Parser {
     markdown: Vec<Token>,
     current_idx: usize,
-    current_branch:Vec<Element>,
-    document: Vec<String>
+    current_branch: Vec<Element>,
+    document: Vec<String>,
 }
 
-impl Parser{
+impl Parser {
+    // Initialize new Parser with Empty element (default state)
     fn new(md_tokens: Vec<Token>) -> Self {
         let mut np = Parser {
             markdown: md_tokens,
             current_idx: 0,
             current_branch: Vec::new(),
-            document: Vec::new()
+            document: Vec::new(),
         };
 
         np.current_branch.push(Element::Empty);
 
-        return np
+        return np;
     }
 
-    fn transition(&mut self, input:Token) {
-        // match Token
-            // Block token (text, list, block quote)
-            // Heading token
-            if let Some(current_state) = self.current_branch.last_mut() {
-                match current_state {
-                    Element::Empty => {
-                        // Input: Header while in neutral state
-                        if (input.0 as u8) < 6 {
-                            self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
-                        }
-                    },
-                    Element::Heading { level, content } => {
-                        // Disgusting; There must be a better way
-                        if input.0 == Tokens::CHAR || input.0 == Tokens::NUMBER || input.0 == Tokens::DASH || input.0 == Tokens::SPACE {
-                            content.push(input.1);
-                        } else if input.0 == Tokens::ASTERISK {
-                            
-                        } else if input.0 == Tokens::NEWLINE {
-                            self.document.push(current_state.to_html());
-                        }
-                    },
-                    _ => {}
+    fn transition(&mut self, input: Token) {
+        if let Some(current_state) = self.current_branch.last_mut() {
+            match current_state {
+                Element::Empty => {
+                    // Heading token
+                    if (input.0 as u8) < 6 {
+                        self.current_branch.push(Element::Heading {
+                            level: (input.0 as u8) + 1,
+                            content: "".to_string(),
+                        });
+                    }
+                    // TODO: Implement Block token (text, list, block quote)
                 }
+
+                Element::Heading { level, content } => {
+                    // FIXME: Disgusting; There must be a better way
+                    if input.0 == Tokens::CHAR
+                        || input.0 == Tokens::NUMBER
+                        || input.0 == Tokens::DASH
+                        || input.0 == Tokens::SPACE
+                    {
+                        content.push(input.1);
+                    } else if input.0 == Tokens::ASTERISK {
+                    } else if input.0 == Tokens::NEWLINE {
+                        self.document.push(current_state.to_html());
+                    }
+                }
+                _ => {}
             }
-            
+        }
     }
 
+    fn parse_inline(&mut self, input: Token) -> String {
+        loop {
+            let current_token = self.markdown[self.current_idx];
+            match current_token {
+                _ => {}
+            }
+
+            self.current_idx += 1;
+        }
+    }
     // fn transition(&mut self, input:Token) {
     //     if let Some(current_state) = self.current_branch.last_mut() {
     //         match current_state {
@@ -194,7 +211,7 @@ impl Parser{
     //                 if input.0 == Tokens::ASTERISK {
     //                     self.current_branch.push(Element::PartialItalics("".to_string()));
     //                 }
-                    
+
     //                 // Transition to Bold elem
     //                 if input.0 == Tokens::DBLASTERISK {
     //                 }
@@ -203,12 +220,12 @@ impl Parser{
     //                     self.current_branch.push(Element::Text(format!("{}", input.1)));
     //                 }
     //             },
-    
+
     //             Element::PartialItalics(text) => {
     //                 if input.0 == Tokens::SPACE {
     //                     text.push(input.1);
     //                     *current_state = Element::Text(text.to_owned());
-                        
+
     //                 } else {
     //                 }
     //             },
@@ -219,9 +236,9 @@ impl Parser{
     //                     // add to parent element
     //                 }
     //             }
-    
+
     //             Element::Bold(text) => {
-    
+
     //             },
 
     //             Element::Text(text) => {
@@ -233,7 +250,7 @@ impl Parser{
     //                     self.current_branch.push(Element::PartialItalics("".to_string()));
     //                 }
     //             },
-    
+
     //             Element::Heading { level, content } => {
     //                 if input.0 == Tokens::NEWLINE {
     //                     // Push element into AST or document?
@@ -246,20 +263,17 @@ impl Parser{
     //     }
     // }
 
-    fn to_html(&mut self)  {
+    fn to_html(&mut self) {
         let mut elements = self.document.iter();
-        while let Some(elem) = elements.next()  {
+        while let Some(elem) = elements.next() {
             println!("{}", elem);
         }
-        
-
-
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*; 
+    use super::*;
 
     #[test]
     fn test_headers() {
@@ -267,9 +281,9 @@ mod tests {
             // Generate MD element
             let hashes = "#".repeat(level);
             let header_text = format!("{} Title {}", hashes, level);
-            
+
             let tokens = tokenize(&header_text);
-            
+
             // Header enum variants start at 0, hence level - 1
             assert_eq!(tokens[0].0 as usize, level - 1);
         }
