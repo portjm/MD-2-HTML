@@ -160,108 +160,62 @@ impl Parser {
                 Element::Empty => {
                     // Heading token
                     if (input.0 as u8) < 6 {
-                        self.current_branch.push(Element::Heading {
+                        *current_state = Element::Heading {
                             level: (input.0 as u8) + 1,
                             content: "".to_string(),
-                        });
+                        }
                     }
                     // TODO: Implement Block token (text, list, block quote)
                 }
 
                 Element::Heading { level, content } => {
-                    // FIXME: Disgusting; There must be a better way
+                    // Regular text
                     if input.0 == Tokens::CHAR
                         || input.0 == Tokens::NUMBER
                         || input.0 == Tokens::DASH
                         || input.0 == Tokens::SPACE
                     {
                         content.push(input.1);
+                    // Inline elements
                     } else if input.0 == Tokens::ASTERISK {
+                        let mut inline_elem = Element::Italics(String::new());
+                        let new_idx = self.parse_inline(inline_elem);
+
+                        // content.push_str(&inline_elem.to_html());
                     } else if input.0 == Tokens::NEWLINE {
                         self.document.push(current_state.to_html());
+                        *current_state = Element::Empty;
                     }
                 }
                 _ => {}
             }
-        }
-    }
-
-    fn parse_inline(&mut self, input: Token) -> String {
-        loop {
-            let current_token = self.markdown[self.current_idx];
-            match current_token {
-                _ => {}
-            }
-
             self.current_idx += 1;
         }
     }
-    // fn transition(&mut self, input:Token) {
-    //     if let Some(current_state) = self.current_branch.last_mut() {
-    //         match current_state {
-    //             // Base state
-    //             Element::Empty => {
 
-    //                 // Transition to Heading elem
-    //                 if (input.0 as u8) < 6 {
-    //                     self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
-    //                 }
+    fn parse_inline(&self, elem: Element) -> usize {
+        // let mut text: String = String::new();
+        let mut current_idx = self.current_idx;
+        if let Element::Italics(mut text) = elem {
+            loop {
+                current_idx += 1;
+                let current_token = &self.markdown[current_idx];
 
-    //                 // Transition to Italics elem
-    //                 if input.0 == Tokens::ASTERISK {
-    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
-    //                 }
-
-    //                 // Transition to Bold elem
-    //                 if input.0 == Tokens::DBLASTERISK {
-    //                 }
-
-    //                 if input.0 == Tokens::CHAR {
-    //                     self.current_branch.push(Element::Text(format!("{}", input.1)));
-    //                 }
-    //             },
-
-    //             Element::PartialItalics(text) => {
-    //                 if input.0 == Tokens::SPACE {
-    //                     text.push(input.1);
-    //                     *current_state = Element::Text(text.to_owned());
-
-    //                 } else {
-    //                 }
-    //             },
-    //             Element::Italics(text) => {
-    //                 if input.0 != Tokens::ASTERISK || input.0 != Tokens::NEWLINE  {
-    //                     text.push(input.1);
-    //                 } else if input.0 == Tokens::ASTERISK { // Complete Italics element
-    //                     // add to parent element
-    //                 }
-    //             }
-
-    //             Element::Bold(text) => {
-
-    //             },
-
-    //             Element::Text(text) => {
-    //                 if input.0 == Tokens::CHAR || input.0 == Tokens::NUMBER {
-    //                     text.push(input.1);
-    //                 } else if input.0 == Tokens::ASTERISK {
-    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
-    //                 } else if (input.0 as u8) < 6 {
-    //                     self.current_branch.push(Element::PartialItalics("".to_string()));
-    //                 }
-    //             },
-
-    //             Element::Heading { level, content } => {
-    //                 if input.0 == Tokens::NEWLINE {
-    //                     // Push element into AST or document?
-    //                 } else if input.0 == Tokens::ASTERISK {
-    //                     self.current_branch.push(Element::Heading { level: (input.0 as u8) + 1, content: "".to_string() });
-    //                 }
-    //             }
-    //             _ => {}
-    //         }
-    //     }
-    // }
+                match current_token.0 {
+                    Tokens::CHAR | Tokens::NUMBER | Tokens::DASH | Tokens::SPACE => {
+                        text.push(current_token.1);
+                    }
+                    Tokens::ASTERISK => {
+                        break;
+                    }
+                    _ => {
+                        println!("Unknown token.");
+                    }
+                }
+            }
+        }
+        return current_idx;
+    }
 
     fn to_html(&mut self) {
         let mut elements = self.document.iter();
@@ -276,7 +230,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_headers() {
+    fn test_heading_tokenization() {
         for level in 1..7 {
             // Generate MD element
             let hashes = "#".repeat(level);
@@ -287,6 +241,22 @@ mod tests {
             // Header enum variants start at 0, hence level - 1
             assert_eq!(tokens[0].0 as usize, level - 1);
         }
+    }
+
+    #[test]
+    fn test_heading_parsing() {
+        let heading = String::from("## title\n ### title3\n");
+        let tokens = tokenize(&heading);
+        let n = tokens.len();
+
+        let mut prsr = Parser::new(tokens);
+        while prsr.current_idx < n {
+            let t = prsr.markdown[prsr.current_idx];
+            println!("{:?}", t);
+            prsr.transition(t);
+        }
+
+        prsr.to_html();
     }
 
     // INCOMPLETE
